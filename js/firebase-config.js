@@ -21,4 +21,3 @@ if (db.settings) {
   db.settings({ experimentalForceLongPolling: false, experimentalAutoDetectLongPolling: false });
 }
 export const SCROLL_PATH = '/scrollPosition';
-export const SCROLL_PATH = '/scrollPosition';
