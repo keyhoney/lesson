@@ -1,127 +1,22 @@
-<html>
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <title>Math Quiz - Student</title>
+  <meta charset="UTF-8">
+  <title>학생용 뷰</title>
+  <script type="module" src="js/firebase-config.js"></script>
+  <script type="module" src="js/scroll-sync.js"></script>
   <style>
-    /* Disable scrolling */
-    html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
-    .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-    .question { font-size: 1.5em; margin: 1em; }
-    .options { display: flex; flex-direction: column; }
-    button { margin: 0.5em; padding: 0.75em 1.5em; font-size: 1em; }
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    #container { overflow: hidden; height: 100vh; }
+    #container img { display: block; width: 100%; }
   </style>
-  <!-- Firebase CDN -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <div class="container" id="app">
-    <div id="loading">Loading...</div>
+  <div id="container">
+    <!-- 교사용 뷰와 동일하게 여러 장 이미지 배치 -->
+    <img src="assets/images/01.jpg" alt="웹툰 1">
+    <img src="assets/images/02.jpg" alt="웹툰 2">
+    <img src="assets/images/03.jpg" alt="웹툰 3">
   </div>
-
-  <script>
-    // Firebase config (lesson-1276d project)
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
-      authDomain: "lesson-1276d.firebaseapp.com",
-      projectId: "lesson-1276d",
-      storageBucket: "lesson-1276d.firebasestorage.app",
-      messagingSenderId: "616109953467",
-      appId: "1:616109953467:web:0bd94203726d5d9d0f749e",
-      measurementId: "G-GJGZRHNMNL"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const sessionRef = db.collection('sessions').doc('default');
-    let studentName = '';
-    let currentQuiz = [];
-    let currentIndex = 0;
-
-    // Auth & Name Entry
-    auth.onAuthStateChanged(async user => {
-      if (!user) {
-        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-        return;
-      }
-      // 이름 가져오기 (로컬저장소에 없으면 prompt)
-      studentName = localStorage.getItem('studentName') || '';
-      if (!studentName) {
-        studentName = prompt('이름을 입력하세요:') || user.displayName || '익명';
-        localStorage.setItem('studentName', studentName);
-      }
-      // 학생 정보 Firestore에 저장
-      db.collection('sessions').doc('default')
-        .collection('students').doc(user.uid).set({
-          name: studentName,
-          uid: user.uid,
-          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      initListeners();
-    });
-
-    function initListeners() {
-      // Listen for quiz data
-      sessionRef.onSnapshot(doc => {
-        const data = doc.data() || {};
-        currentQuiz = data.questions || [];
-        renderQuestion();
-      });
-      // Listen for current question index
-      sessionRef.collection('state').doc('current').onSnapshot(doc => {
-        currentIndex = doc.data()?.index || 0;
-        renderQuestion();
-      });
-    }
-
-    function renderQuestion() {
-      const app = document.getElementById('app');
-      app.innerHTML = '';
-      if (!currentQuiz.length) {
-        app.innerHTML = '<div>현재 진행 중인 퀴즈가 없습니다.</div>';
-        return;
-      }
-      const q = currentQuiz[currentIndex];
-      const questionEl = document.createElement('div');
-      questionEl.className = 'question';
-      questionEl.innerText = q.prompt;
-      app.appendChild(questionEl);
-
-      const opts = document.createElement('div');
-      opts.className = 'options';
-      if (q.type === 'multiple') {
-        q.options.forEach(opt => {
-          const btn = document.createElement('button');
-          btn.innerText = opt;
-          btn.onclick = () => submitAnswer(opt);
-          opts.appendChild(btn);
-        });
-      } else {
-        const input = document.createElement('input');
-        input.placeholder = 'Your answer';
-        const btn = document.createElement('button');
-        btn.innerText = 'Submit';
-        btn.onclick = () => submitAnswer(input.value);
-        opts.appendChild(input);
-        opts.appendChild(btn);
-      }
-      app.appendChild(opts);
-    }
-
-    function submitAnswer(answer) {
-      const q = currentQuiz[currentIndex];
-      const isCorrect = String(answer).trim().toLowerCase() === String(q.correct).trim().toLowerCase();
-      // Write answer
-      sessionRef.collection('answers').add({
-        name: studentName,
-        questionIndex: currentIndex,
-        answer,
-        isCorrect,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert(isCorrect ? 'Correct!' : 'Incorrect!');
-    }
-  </script>
 </body>
 </html>
