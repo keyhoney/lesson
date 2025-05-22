@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Math Quiz - Teacher</title>
+  <title>Math Quiz Teacher</title>
   <style>
     body { font-family: sans-serif; margin: 1em; }
     .controls, .stats, .history { margin-bottom: 2em; }
@@ -17,8 +17,9 @@
 </head>
 <body>
   <h1>Teacher Dashboard</h1>
+  <div id="loading">Loading...</div>
 
-  <div class="controls">
+  <div class="controls" style="display:none;">
     <h2>Create Question</h2>
     <input id="prompt" placeholder="Question prompt">
     <select id="type">
@@ -41,7 +42,7 @@
 
   <div class="stats">
     <h2>Live Stats</h2>
-    <div id="liveCounts">Loading...</div>
+    <div id="liveCounts">Loading stats...</div>
   </div>
 
   <div class="history">
@@ -55,7 +56,7 @@
   </div>
 
   <script>
-    // Firebase config (lesson-1276d project)
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
       authDomain: "lesson-1276d.firebaseapp.com",
@@ -66,22 +67,36 @@
       measurementId: "G-GJGZRHNMNL"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
     const sessionRef = db.collection('sessions').doc('default');
     let questions = [];
     let currentIndex = 0;
     let stats = {};
 
-    // UI Toggles
-    document.getElementById('type').onchange = e => {
+    // Require teacher login
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        return;
+      }
+      document.getElementById('loading').style.display = 'none';
+      document.querySelector('.controls').style.display = 'block';
+      listenAnswers();
+      listenHistory();
+    });
+
+    // Toggle options input
+    document.getElementById('type').addEventListener('change', e => {
       document.getElementById('optionsInput').style.display = e.target.value === 'multiple' ? 'block' : 'none';
-    };
+    });
 
     // Add question locally
     function addQuestion() {
-      const prompt = document.getElementById('prompt').value;
+      const prompt = document.getElementById('prompt').value.trim();
       const type = document.getElementById('type').value;
-      const correct = document.getElementById('correct').value;
+      const correct = document.getElementById('correct').value.trim();
+      if (!prompt || !correct) return alert('Prompt와 정답을 모두 입력하세요.');
       const q = { prompt, type, correct };
       if (type === 'multiple') {
         q.options = [
@@ -92,16 +107,15 @@
         ];
       }
       questions.push(q);
-      alert('Question added');
+      alert('문제가 추가되었습니다.');
     }
 
-    // Publish entire quiz
+    // Publish quiz to Firestore
     function publishQuiz() {
-      sessionRef.set({ questions });
-      sessionRef.collection('state').doc('current').set({ index: 0 });
-      listenAnswers();
-      listenHistory();
-      alert('Quiz published');
+      sessionRef.set({ questions })
+        .then(() => sessionRef.collection('state').doc('current').set({ index: 0 }))
+        .then(() => alert('퀴즈가 배포되었습니다.'))
+        .catch(err => alert('퀴즈 배포 오류: ' + err.message));
     }
 
     // Navigate questions
@@ -114,48 +128,47 @@
       sessionRef.collection('state').doc('current').set({ index: currentIndex });
     }
 
-    // Live answer stats
+    // Live stats listener
     function listenAnswers() {
       sessionRef.collection('answers').onSnapshot(snap => {
         stats = {};
         snap.forEach(doc => {
           const a = doc.data();
           const idx = a.questionIndex;
-          if (!stats[idx]) stats[idx] = { total: 0, correct: 0 };
+          stats[idx] = stats[idx] || { total: 0, correct: 0 };
           stats[idx].total++;
           if (a.isCorrect) stats[idx].correct++;
         });
         updateLiveUI();
-      });
+      }, err => console.error('Stats listen error:', err));
     }
     function updateLiveUI() {
       let html = '<ul>';
       Object.keys(stats).forEach(idx => {
         const s = stats[idx];
-        html += `<li>Q${+idx+1}: ${s.total} answered, ${s.correct} correct, ${s.total - s.correct} incorrect</li>`;
+        html += `<li>Q${+idx+1}: 총 ${s.total}명, 정답 ${s.correct}, 오답 ${s.total - s.correct}</li>`;
       });
       html += '</ul>';
       document.getElementById('liveCounts').innerHTML = html;
     }
 
-    // Save history
+    // Save quiz history
     function finishQuiz() {
-      const summary = Object.values(stats).reduce((acc, s) => {
-        acc.total += s.total;
-        acc.correct += s.correct;
-        return acc;
-      }, { total:0, correct:0 });
+      const summary = Object.values(stats).reduce((acc, s) => ({
+        total: acc.total + s.total,
+        correct: acc.correct + s.correct
+      }), { total: 0, correct: 0 });
       summary.incorrect = summary.total - summary.correct;
       db.collection('history').add({
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         ...summary
-      });
-      alert('History saved');
+      }).then(() => alert('히스토리가 저장되었습니다.'))
+        .catch(err => alert('히스토리 저장 오류: ' + err.message));
     }
 
-    // Listen history
+    // Listen quiz history
     function listenHistory() {
-      db.collection('history').orderBy('timestamp','desc').onSnapshot(snap => {
+      db.collection('history').orderBy('timestamp', 'desc').onSnapshot(snap => {
         const tbody = document.querySelector('#historyTable tbody');
         tbody.innerHTML = '';
         snap.forEach(doc => {
@@ -165,7 +178,7 @@
           tr.innerHTML = `<td>${time}</td><td>${data.total}</td><td>${data.correct}</td><td>${data.incorrect}</td>`;
           tbody.appendChild(tr);
         });
-      });
+      }, err => console.error('History listen error:', err));
     }
   </script>
 </body>
