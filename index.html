@@ -21,15 +21,15 @@
   </div>
 
   <script>
-    // TODO: Replace with your own Firebase config
+    // Firebase config (lesson-1276d project)
     const firebaseConfig = {
-    apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
-    authDomain: "lesson-1276d.firebaseapp.com",
-    projectId: "lesson-1276d",
-    storageBucket: "lesson-1276d.firebasestorage.app",
-    messagingSenderId: "616109953467",
-    appId: "1:616109953467:web:0bd94203726d5d9d0f749e",
-    measurementId: "G-GJGZRHNMNL"
+      apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
+      authDomain: "lesson-1276d.firebaseapp.com",
+      projectId: "lesson-1276d",
+      storageBucket: "lesson-1276d.firebasestorage.app",
+      messagingSenderId: "616109953467",
+      appId: "1:616109953467:web:0bd94203726d5d9d0f749e",
+      measurementId: "G-GJGZRHNMNL"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -39,30 +39,27 @@
     let currentQuiz = [];
     let currentIndex = 0;
 
-// Auth & Name Entry
-auth.onAuthStateChanged(async user => {
-  if (!user) {
-    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    return;
-  }
-
--  studentName = localStorage.getItem('studentName');
--  if (!studentName) {
--    studentName = prompt('Enter your name:');
--    localStorage.setItem('studentName', studentName);
--  }
-+  // 1) 로컬스토리지에 저장된 이름 가져오기
-+  studentName = localStorage.getItem('studentName') || '';
-+  // 2) 이름이 없거나, 항상 다시 묻고 싶으면 true로 변경
-+  const forceAsk = true; 
-+  if (!studentName || forceAsk) {
-+    studentName = prompt('이름을 입력하세요:') || user.displayName || '익명';
-+    localStorage.setItem('studentName', studentName);
-+  }
-
-  initListeners();
-});
-
+    // Auth & Name Entry
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        return;
+      }
+      // 이름 가져오기 (로컬저장소에 없으면 prompt)
+      studentName = localStorage.getItem('studentName') || '';
+      if (!studentName) {
+        studentName = prompt('이름을 입력하세요:') || user.displayName || '익명';
+        localStorage.setItem('studentName', studentName);
+      }
+      // 학생 정보 Firestore에 저장
+      db.collection('sessions').doc('default')
+        .collection('students').doc(user.uid).set({
+          name: studentName,
+          uid: user.uid,
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      initListeners();
+    });
 
     function initListeners() {
       // Listen for quiz data
@@ -82,7 +79,7 @@ auth.onAuthStateChanged(async user => {
       const app = document.getElementById('app');
       app.innerHTML = '';
       if (!currentQuiz.length) {
-        app.innerHTML = '<div>No quiz available</div>';
+        app.innerHTML = '<div>현재 진행 중인 퀴즈가 없습니다.</div>';
         return;
       }
       const q = currentQuiz[currentIndex];
