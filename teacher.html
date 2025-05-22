@@ -1,0 +1,163 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Math Quiz - Teacher</title>
+  <style>
+    body { font-family: sans-serif; margin: 1em; }
+    .controls, .stats, .history { margin-bottom: 2em; }
+    input, select, button { margin: 0.5em; padding: 0.5em; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+  </style>
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h1>Teacher Dashboard</h1>
+  <div class="controls">
+    <h2>Create Question</h2>
+    <input id="prompt" placeholder="Question prompt">
+    <select id="type">
+      <option value="short">Short Answer</option>
+      <option value="multiple">Multiple Choice</option>
+    </select>
+    <div id="optionsInput" style="display:none;">
+      <input id="opt1" placeholder="Option 1">
+      <input id="opt2" placeholder="Option 2">
+      <input id="opt3" placeholder="Option 3">
+      <input id="opt4" placeholder="Option 4">
+    </div>
+    <input id="correct" placeholder="Correct answer">
+    <button onclick="addQuestion()">Add to Quiz</button>
+    <button onclick="publishQuiz()">Publish Quiz</button>
+    <button onclick="nextQuestion()">Next</button>
+    <button onclick="prevQuestion()">Prev</button>
+    <button onclick="finishQuiz()">Finish & Save History</button>
+  </div>
+
+  <div class="stats">
+    <h2>Live Stats</h2>
+    <div id="liveCounts">Loading...</div>
+  </div>
+
+  <div class="history">
+    <h2>Quiz History</h2>
+    <table id="historyTable">
+      <thead><tr><th>Time</th><th>Total</th><th>Correct</th><th>Incorrect</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    // TODO: Replace with your own Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const sessionRef = db.collection('sessions').doc('default');
+    let questions = [];
+    let currentIndex = 0;
+    let stats = {};
+
+    // UI Toggles
+    document.getElementById('type').onchange = e => {
+      document.getElementById('optionsInput').style.display = e.target.value === 'multiple' ? 'block' : 'none';
+    };
+
+    // Add question locally
+    function addQuestion() {
+      const prompt = document.getElementById('prompt').value;
+      const type = document.getElementById('type').value;
+      const correct = document.getElementById('correct').value;
+      const q = { prompt, type, correct };
+      if (type === 'multiple') {
+        q.options = [
+          document.getElementById('opt1').value,
+          document.getElementById('opt2').value,
+          document.getElementById('opt3').value,
+          document.getElementById('opt4').value
+        ];
+      }
+      questions.push(q);
+      alert('Question added');
+    }
+
+    // Publish entire quiz
+    function publishQuiz() {
+      sessionRef.set({ questions });
+      sessionRef.collection('state').doc('current').set({ index: 0 });
+      listenAnswers();
+      listenHistory();
+      alert('Quiz published');
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+      sessionRef.collection('state').doc('current').set({ index: currentIndex });
+    }
+    function prevQuestion() {
+      if (currentIndex > 0) currentIndex--;
+      sessionRef.collection('state').doc('current').set({ index: currentIndex });
+    }
+
+    // Live answer stats
+    function listenAnswers() {
+      sessionRef.collection('answers').onSnapshot(snap => {
+        stats = {};
+        snap.forEach(doc => {
+          const a = doc.data();
+          const idx = a.questionIndex;
+          if (!stats[idx]) stats[idx] = { total: 0, correct: 0 };
+          stats[idx].total++;
+          if (a.isCorrect) stats[idx].correct++;
+        });
+        updateLiveUI();
+      });
+    }
+    function updateLiveUI() {
+      let html = '<ul>';
+      Object.keys(stats).forEach(idx => {
+        const s = stats[idx];
+        html += `<li>Q${idx+1}: ${s.total} answered, ${s.correct} correct, ${s.total - s.correct} incorrect</li>`;
+      });
+      html += '</ul>';
+      document.getElementById('liveCounts').innerHTML = html;
+    }
+
+    // Save history
+    function finishQuiz() {
+      const summary = Object.values(stats).reduce((acc, s) => {
+        acc.total += s.total;
+        acc.correct += s.correct;
+        return acc;
+      }, { total:0, correct:0 });
+      summary.incorrect = summary.total - summary.correct;
+      db.collection('history').add({
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        ...summary
+      });
+      alert('History saved');
+    }
+
+    // Listen history
+    function listenHistory() {
+      db.collection('history').orderBy('timestamp','desc').onSnapshot(snap => {
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = '';
+        snap.forEach(doc => {
+          const data = doc.data();
+          const tr = document.createElement('tr');
+          const time = data.timestamp?.toDate().toLocaleString() || '';
+          tr.innerHTML = `<td>${time}</td><td>${data.total}</td><td>${data.correct}</td><td>${data.incorrect}</td>`;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
