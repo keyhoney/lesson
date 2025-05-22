@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>교사용 스크롤 뷰</title>
+  <script type="module" src="js/firebase-config.js"></script>
+  <script type="module" src="js/scroll-sync.js"></script>
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #container { overflow-y: scroll; height: 100vh; }
+    #container img { display: block; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- 웹툰 이미지 여러 장 로드 -->
+    <img src="assets/images/01.jpg" alt="웹툰 1">
+    <img src="assets/images/02.jpg" alt="웹툰 2">
+    <img src="assets/images/03.jpg" alt="웹툰 3">
+    <!-- 추가 이미지도 같은 방식으로 삽입 -->
+  </div>
+</body>
+</html>
