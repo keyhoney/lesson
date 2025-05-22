@@ -39,19 +39,30 @@
     let currentQuiz = [];
     let currentIndex = 0;
 
-    // Auth & Name Entry
-    auth.onAuthStateChanged(async user => {
-      if (!user) {
-        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-        return;
-      }
-      studentName = localStorage.getItem('studentName');
-      if (!studentName) {
-        studentName = prompt('Enter your name:');
-        localStorage.setItem('studentName', studentName);
-      }
-      initListeners();
-    });
+// Auth & Name Entry
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    return;
+  }
+
+-  studentName = localStorage.getItem('studentName');
+-  if (!studentName) {
+-    studentName = prompt('Enter your name:');
+-    localStorage.setItem('studentName', studentName);
+-  }
++  // 1) 로컬스토리지에 저장된 이름 가져오기
++  studentName = localStorage.getItem('studentName') || '';
++  // 2) 이름이 없거나, 항상 다시 묻고 싶으면 true로 변경
++  const forceAsk = true; 
++  if (!studentName || forceAsk) {
++    studentName = prompt('이름을 입력하세요:') || user.displayName || '익명';
++    localStorage.setItem('studentName', studentName);
++  }
+
+  initListeners();
+});
+
 
     function initListeners() {
       // Listen for quiz data
