@@ -1,0 +1,118 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Math Quiz - Student</title>
+  <style>
+    /* Disable scrolling */
+    html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+    .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+    .question { font-size: 1.5em; margin: 1em; }
+    .options { display: flex; flex-direction: column; }
+    button { margin: 0.5em; padding: 0.75em 1.5em; font-size: 1em; }
+  </style>
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="container" id="app">
+    <div id="loading">Loading...</div>
+  </div>
+
+  <script>
+    // TODO: Replace with your own Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "...",
+      appId: "..."
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const sessionRef = db.collection('sessions').doc('default');
+    let studentName = '';
+    let currentQuiz = [];
+    let currentIndex = 0;
+
+    // Auth & Name Entry
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        return;
+      }
+      studentName = localStorage.getItem('studentName');
+      if (!studentName) {
+        studentName = prompt('Enter your name:');
+        localStorage.setItem('studentName', studentName);
+      }
+      initListeners();
+    });
+
+    function initListeners() {
+      // Listen for quiz data
+      sessionRef.onSnapshot(doc => {
+        const data = doc.data() || {};
+        currentQuiz = data.questions || [];
+        renderQuestion();
+      });
+      // Listen for current question index
+      sessionRef.collection('state').doc('current').onSnapshot(doc => {
+        currentIndex = doc.data()?.index || 0;
+        renderQuestion();
+      });
+    }
+
+    function renderQuestion() {
+      const app = document.getElementById('app');
+      app.innerHTML = '';
+      if (!currentQuiz.length) {
+        app.innerHTML = '<div>No quiz available</div>';
+        return;
+      }
+      const q = currentQuiz[currentIndex];
+      const questionEl = document.createElement('div');
+      questionEl.className = 'question';
+      questionEl.innerText = q.prompt;
+      app.appendChild(questionEl);
+
+      const opts = document.createElement('div');
+      opts.className = 'options';
+      if (q.type === 'multiple') {
+        q.options.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.innerText = opt;
+          btn.onclick = () => submitAnswer(opt);
+          opts.appendChild(btn);
+        });
+      } else {
+        const input = document.createElement('input');
+        input.placeholder = 'Your answer';
+        const btn = document.createElement('button');
+        btn.innerText = 'Submit';
+        btn.onclick = () => submitAnswer(input.value);
+        opts.appendChild(input);
+        opts.appendChild(btn);
+      }
+      app.appendChild(opts);
+    }
+
+    function submitAnswer(answer) {
+      const q = currentQuiz[currentIndex];
+      const isCorrect = String(answer).trim().toLowerCase() === String(q.correct).trim().toLowerCase();
+      // Write answer
+      sessionRef.collection('answers').add({
+        name: studentName,
+        questionIndex: currentIndex,
+        answer,
+        isCorrect,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert(isCorrect ? 'Correct!' : 'Incorrect!');
+    }
+  </script>
+</body>
+</html>
