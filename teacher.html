@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -16,6 +17,7 @@
 </head>
 <body>
   <h1>Teacher Dashboard</h1>
+
   <div class="controls">
     <h2>Create Question</h2>
     <input id="prompt" placeholder="Question prompt">
@@ -32,8 +34,8 @@
     <input id="correct" placeholder="Correct answer">
     <button onclick="addQuestion()">Add to Quiz</button>
     <button onclick="publishQuiz()">Publish Quiz</button>
-    <button onclick="nextQuestion()">Next</button>
     <button onclick="prevQuestion()">Prev</button>
+    <button onclick="nextQuestion()">Next</button>
     <button onclick="finishQuiz()">Finish & Save History</button>
   </div>
 
@@ -45,21 +47,23 @@
   <div class="history">
     <h2>Quiz History</h2>
     <table id="historyTable">
-      <thead><tr><th>Time</th><th>Total</th><th>Correct</th><th>Incorrect</th></tr></thead>
+      <thead>
+        <tr><th>Time</th><th>Total</th><th>Correct</th><th>Incorrect</th></tr>
+      </thead>
       <tbody></tbody>
     </table>
   </div>
 
   <script>
-    // TODO: Replace with your own Firebase config
+    // Firebase config (lesson-1276d project)
     const firebaseConfig = {
-    apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
-    authDomain: "lesson-1276d.firebaseapp.com",
-    projectId: "lesson-1276d",
-    storageBucket: "lesson-1276d.firebasestorage.app",
-    messagingSenderId: "616109953467",
-    appId: "1:616109953467:web:0bd94203726d5d9d0f749e",
-    measurementId: "G-GJGZRHNMNL"
+      apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
+      authDomain: "lesson-1276d.firebaseapp.com",
+      projectId: "lesson-1276d",
+      storageBucket: "lesson-1276d.firebasestorage.app",
+      messagingSenderId: "616109953467",
+      appId: "1:616109953467:web:0bd94203726d5d9d0f749e",
+      measurementId: "G-GJGZRHNMNL"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -100,12 +104,13 @@
       alert('Quiz published');
     }
 
-    function nextQuestion() {
-      currentIndex++;
-      sessionRef.collection('state').doc('current').set({ index: currentIndex });
-    }
+    // Navigate questions
     function prevQuestion() {
       if (currentIndex > 0) currentIndex--;
+      sessionRef.collection('state').doc('current').set({ index: currentIndex });
+    }
+    function nextQuestion() {
+      currentIndex++;
       sessionRef.collection('state').doc('current').set({ index: currentIndex });
     }
 
@@ -127,7 +132,7 @@
       let html = '<ul>';
       Object.keys(stats).forEach(idx => {
         const s = stats[idx];
-        html += `<li>Q${idx+1}: ${s.total} answered, ${s.correct} correct, ${s.total - s.correct} incorrect</li>`;
+        html += `<li>Q${+idx+1}: ${s.total} answered, ${s.correct} correct, ${s.total - s.correct} incorrect</li>`;
       });
       html += '</ul>';
       document.getElementById('liveCounts').innerHTML = html;
