@@ -5,7 +5,7 @@ import { getDatabase } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-d
 const firebaseConfig = {
   apiKey: "AIzaSyC7yqfCKzG9aVho1Y_ATXBfsCtLeiMU_U4",
   authDomain: "lesson-1276d.firebaseapp.com",
-  databaseURL: "https://lesson-1276d.firebaseio.com",
+  databaseURL: "https://lesson-1276d-default-rtdb.firebaseio.com/",
   projectId: "lesson-1276d",
   storageBucket: "lesson-1276d.firebasestorage.app",
   messagingSenderId: "616109953467",
