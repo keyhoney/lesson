@@ -7,14 +7,22 @@
   <script type="module" src="js/scroll-sync.js"></script>
   <style>
     body, html { margin: 0; padding: 0; height: 100%; }
-    #container { overflow-y: scroll; height: 100vh; }
-    /* 이미지 가로 중앙 정렬 및 최대 너비 유지 */
-    #container img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+    #container {
+      overflow-y: scroll;
+      height: 100vh;
+      width: 100vw;
+    }
+    /* 이미지 가로 꽉 채우기 */
+    #container img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0;
+    }
   </style>
 </head>
 <body>
   <div id="container">
-    <!-- 웹툰 이미지 여러 장 로드 -->
     <img src="assets/images/1.jpg" alt="웹툰 1">
     <img src="assets/images/2.jpg" alt="웹툰 2">
     <img src="assets/images/3.jpg" alt="웹툰 3">
